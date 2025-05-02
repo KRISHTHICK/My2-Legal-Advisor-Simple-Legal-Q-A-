@@ -1,0 +1,5 @@
+a2a-legal-advisor/
+│
+├── app.py                  # Streamlit app
+├── requirements.txt        # Package list
+└── sample.pdf              # Example legal doc (optional)
