@@ -47,10 +47,13 @@ import streamlit as st
 import pdfplumber
 from langchain_community.llms import Ollama
 from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 import tempfile
+import faiss
+import numpy as np
+from langchain_community.docstore.in_memory import InMemoryDocstore  # Import the correct docstore
 
 # --- Streamlit UI ---
 st.title("📚 A2A Legal Advisor")
@@ -74,11 +77,34 @@ def extract_text(file):
 
 # --- Vector Store ---
 def make_qa_chain(text):
+    # Split the document into chunks
     splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     docs = splitter.create_documents([text])
+    
+    # Use Ollama to create embeddings
     embedding = OllamaEmbeddings(model="nomic-embed-text")
-    vectordb = Chroma.from_documents(docs, embedding)
-    retriever = vectordb.as_retriever()
+    embeddings = embedding.embed_documents([doc.page_content for doc in docs])
+    
+    # Convert embeddings to numpy array (FAISS requires float32)
+    embeddings = np.array(embeddings).astype('float32')
+    
+    # Create FAISS index
+    index = faiss.IndexFlatL2(embeddings.shape[1])  # L2 distance index
+    index.add(embeddings)
+    
+    # Create an InMemoryDocstore to store the documents
+    docstore = InMemoryDocstore({i: doc for i, doc in enumerate(docs)})
+    
+    # Map index to document ID
+    index_to_docstore_id = {i: i for i in range(len(docs))}
+    
+    # Create FAISS vector store
+    vectorstore = FAISS(index=index, embedding_function=embedding, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
+    
+    # Create a retriever
+    retriever = vectorstore.as_retriever()
+    
+    # Use the LLM (Ollama)
     llm = Ollama(model="llama3")
     return RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
