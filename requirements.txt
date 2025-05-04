@@ -1,7 +1,20 @@
+# streamlit
+# langchain
+# pdfplumber
+# ollama
+
 streamlit
-langchain
-pdfplumber
+langchain==0.1.14
+langchain-community
+langchain-core
 ollama
+pdfplumber
+pip install faiss-cpu  # For FAISS (CPU-based)
+pip install langchain
+pip install numpy
+pip install pdfplumber
+
+
 
 # Then run the app
 # streamlit run app.py
